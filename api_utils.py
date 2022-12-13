@@ -229,6 +229,14 @@ def create_card_and_get_id(key, token, card_name, list_id):
         return ''
     return get_card_id(key, token, card_name, list_id)
 
+
+def delete_board(key, token, board_id):
+    url_details = '/boards/' + board_id
+    response = send_request(key, token, 'DELETE', url_details)
+    if (check_response(response, "ERROR: failed to delete board. id = " + board_id) < 0):
+        return HTTP_ERROR
+    return 0
+
 # def move_card_to_list(key, token, card_id, list_id):
 #     url_details = '/cards/' + card_id + '/idList'
 #     response = send_request(key, token, 'PUT', url_details, query_parameters={'value': list_id})

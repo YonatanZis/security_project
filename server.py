@@ -32,6 +32,12 @@ def initialize_new_bot(bootstrap_list_id, bot_id):
         return
     new_key = available_bots_credentials[0]['key']
     new_token = available_bots_credentials[0]['token']
+    # delete previous boards on this account (cleanup)
+    boards = utils.get_all_boards(new_key, new_token)
+    for board in boards:
+        if utils.delete_board(new_key, new_token, board['id']) < 0:
+            print("ERROR: could not delete board. key: " + new_key + ". id: " + board['id'])
+
     # create new board and list on the new account
     if utils.create_board(new_key, new_token, utils.BOT_BOARD_NAME + bot_id) < 0:
         print("ERROR: could not create board")
