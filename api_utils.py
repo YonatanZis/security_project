@@ -42,6 +42,7 @@ p = 2973967954318052416002183554360453982181157940540558319940550532629762027148
 # The generator value
 g = 2
 
+
 def subtract_lists(list1, list2):
     result = []
     for d in list1:
@@ -49,12 +50,14 @@ def subtract_lists(list1, list2):
             result.append(d)
     return result
 
+
 def add_lists(list1, list2):
     result = list1.copy()
     for d in list2:
         if d not in list1:
             result.append(d)
     return result
+
 
 def check_response(response, err_message):
     if response.status_code != SUCCESS:
@@ -197,7 +200,8 @@ def get_command_from_card(key, token, card_id):
 
 def encrypt(key, data):
     data_bytes = bytes(data, 'utf-8')
-    cipher = Cipher(algorithms.AES(key), modes.CFB(b'\x00'*16), backend=default_backend())
+    cipher = Cipher(algorithms.AES(key), modes.CFB(
+        b'\x00'*16), backend=default_backend())
     encryptor = cipher.encryptor()
     encrypted_message = encryptor.update(data_bytes) + encryptor.finalize()
     base64_bytes = base64.b64encode(encrypted_message)
@@ -206,7 +210,8 @@ def encrypt(key, data):
 
 def decrypt(key, data):
     data_bytes = base64.b64decode(data)
-    cipher = Cipher(algorithms.AES(key), modes.CFB(b'\x00'*16), backend=default_backend())
+    cipher = Cipher(algorithms.AES(key), modes.CFB(
+        b'\x00'*16), backend=default_backend())
     decryptor = cipher.decryptor()
     decrypted_message = decryptor.update(data_bytes) + decryptor.finalize()
     decrypted_message_str = str(decrypted_message, 'utf-8')
