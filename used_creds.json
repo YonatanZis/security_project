@@ -1,12 +1,3 @@
 {
-    "creds": [
-        {
-            "key": "31b708e0742efe638e3b853603a4047a",
-            "token": "ATTAbbf97f853af445a9fd020b9f0f0f50f165e6a2acd528a6356f3ef37cc5e99f9e69BF3540"
-        },
-        {
-            "key": "1a309a5b89a0715f0c40aaa138c871b4",
-            "token": "1fa51a67d1a601e39747812cd96634fd146e5554faa627ba9ca90fa9c137e021"
-        }
-    ]
+    "creds": []
 }
